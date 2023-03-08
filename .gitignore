@@ -1,0 +1,4 @@
+venv/
+data/crawls/
+data/lit.json
+data/unis.xlsx
