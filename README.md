@@ -32,7 +32,7 @@ The analysis pages are broken into two categories: university and high school an
 <p align="center">
   <img alt="Light" src="figures/uni_1.png" width="45%">
 &nbsp; &nbsp; &nbsp; &nbsp;
-  <img alt="Dark" src="figures/uni_2dark.png" width="45%">
+  <img alt="Dark" src="figures/uni_2.png" width="45%">
 </p>
 
 ## To Do
