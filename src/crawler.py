@@ -103,7 +103,7 @@ def parse_rankings(dfs: list[pd.DataFrame], year) -> dict:
     }) for df in dfs
   ]
 
-  df = pd.concat(standardized_dfs, ignore_index=True).map(str).replace("---", "").replace("Dolmadı", "")
+  df = pd.concat(standardized_dfs, ignore_index=True).replace("---", "").replace("Dolmadı", "")
   data_dict = df.set_index("Column1")["Column2"].to_dict()
   out = {
     "uni_name":
@@ -129,9 +129,9 @@ def parse_rankings(dfs: list[pd.DataFrame], year) -> dict:
     "max_points":
       data_dict[f"{year} Tavan Puan(0,12)*"],
     "min_ranking":
-      data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Başarı Sırası*"].replace('.', ''),
+      data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Başarı Sırası*"],
     "max_ranking":
-      data_dict[f"{year} Tavan Başarı Sırası(0,12)*"].replace(".", ""),
+      data_dict[f"{year} Tavan Başarı Sırası(0,12)*"]
   }
   return {k: v if v != "" else None for k, v in out.items()}
 
@@ -279,10 +279,8 @@ if __name__ == "__main__":
     programs = list(map(lambda x: x.strip(), f.readlines()))
 
   pbar = tqdm(programs)
-  # pbar = tqdm(programs[136:138])
   for idx in pbar:
     ranking_data, highschool_data = crawl_program(idx, args.year)
-    # pbar.set_description(f"{ranking_data['uni_name']} / {ranking_data['dept_name']}")
     pprint(ranking_data)
     db.write_rankings(ranking_data)
     if len(highschool_data) != 0:
