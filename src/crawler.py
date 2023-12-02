@@ -1,7 +1,10 @@
 import re
+import time
+import sqlite3
 import pandas as pd
 from tqdm import tqdm
 from io import StringIO
+from datetime import datetime
 from database import CrawlDatabase
 from argparse import ArgumentParser
 from typing import Union, Any, Callable
@@ -11,7 +14,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 URL = "https://yokatlas.yok.gov.tr/{year}/lisans-panel.php?y={program_id}&p={table_id}"
 tables = {"ranking": "1000_1", "highschools": "1060"}
@@ -20,30 +23,34 @@ tables = {"ranking": "1000_1", "highschools": "1060"}
 def parse_arguments():
   """ Argument parser for the crawler CLI """
   parser = ArgumentParser(
-    prog="AtlasCrawl🧭",
-    description="Web crawler that scrapes tables from YÖK Atlas.",
-    epilog="Bir kere rehber, daima rehber.",
+      prog="AtlasCrawl🧭",
+      description="Web crawler that scrapes tables from YÖK Atlas.",
+      epilog="Bir kere rehber, daima rehber.",
   )
   parser.add_argument("year", help="Year to scrape", type=int)
   parser.add_argument("program_ids", help="Path to program ID file")
   parser.add_argument(
-    "-d",
-    "--database",
-    default="../data/crawl_database.db",
-    help="Path to the database file (Default ../data/crawl_database.db)"
+      "-d",
+      "--database",
+      default="../data/crawl_database.db",
+      help="Path to the database file (Default ../data/crawl_database.db)"
   )
   parser.add_argument(
-    "-tp",
-    "--timeout-patience",
-    default=5,
-    type=int,
-    help="Amount of seconds for the webdriver to wait for page to load"
+      "-tp",
+      "--timeout-patience",
+      default=5,
+      type=int,
+      help="Amount of seconds for the webdriver to wait for page to load"
   )
   args = parser.parse_args()
   return args
 
 
-def find_element(element_xpath: str, timeout_patience: int = 5, func: Union[Callable, None] = None):
+def find_element(
+    element_xpath: str,
+    timeout_patience: int = 5,
+    func: Union[Callable, None] = None
+):
   """
   Return the element by xpath. Can run function on it if func argument is passed.
 
@@ -68,7 +75,7 @@ def find_element(element_xpath: str, timeout_patience: int = 5, func: Union[Call
     If the element you are looking for does not exist, it raises this exception
   """
   element = WebDriverWait(browser, timeout_patience).until(
-    EC.presence_of_element_located((By.XPATH, element_xpath))
+      EC.presence_of_element_located((By.XPATH, element_xpath))
   )
   if func is not None:
     element = func(element)
@@ -97,41 +104,44 @@ def parse_rankings(dfs: list[pd.DataFrame], year) -> dict:
     dfs = dfs[:-1]
 
   standardized_dfs = [
-    df.rename(columns={
-      df.columns[0]: 'Column1',
-      df.columns[1]: 'Column2'
-    }) for df in dfs
+      df.rename(columns={
+          df.columns[0]: 'Column1',
+          df.columns[1]: 'Column2'
+      }) for df in dfs
   ]
 
-  df = pd.concat(standardized_dfs, ignore_index=True).replace("---", "").replace("Dolmadı", "")
+  df = pd.concat(standardized_dfs, ignore_index=True
+                ).replace("---", "").replace("Dolmadı", "").replace(
+                    '\*', '', regex=True
+                ).map(lambda x: x.strip() if isinstance(x, str) else x)
   data_dict = df.set_index("Column1")["Column2"].to_dict()
   out = {
-    "uni_name":
-      data_dict["Üniversite"],
-    "uni_type":
-      "State" if data_dict["Üniversite Türü"] == "Devlet" else "Private",
-    "fac_name":
-      data_dict["Fakülte / Yüksekokul"],
-    "dept_id":
-      data_dict["ÖSYM Program Kodu"],
-    "dept_name":
-      dept_name.replace("(" + data_dict["Burs Türü"] + ")", "").strip(),
-    "dept_type":
-      data_dict["Puan Türü"],
-    "scholarship":
-      data_dict["Burs Türü"].replace("%", "").split()[0].replace("İÖ-", ""),
-    "total_quota":
-      data_dict["Toplam Kontenjan"],
-    "total_placed":
-      data_dict["Toplam Yerleşen"],
-    "min_points":
-      data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Puanı*"],
-    "max_points":
-      data_dict[f"{year} Tavan Puan(0,12)*"],
-    "min_ranking":
-      data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Başarı Sırası*"],
-    "max_ranking":
-      data_dict[f"{year} Tavan Başarı Sırası(0,12)*"]
+      "uni_name":
+          data_dict["Üniversite"],
+      "uni_type":
+          "State" if data_dict["Üniversite Türü"] == "Devlet" else "Private",
+      "fac_name":
+          data_dict["Fakülte / Yüksekokul"],
+      "dept_id":
+          data_dict["ÖSYM Program Kodu"],
+      "dept_name":
+          dept_name.replace("(" + data_dict["Burs Türü"] + ")", "").strip(),
+      "dept_type":
+          data_dict["Puan Türü"],
+      "scholarship":
+          data_dict["Burs Türü"].replace("%", "").split()[0].replace("İÖ-", ""),
+      "total_quota":
+          data_dict["Toplam Kontenjan"],
+      "total_placed":
+          data_dict["Toplam Yerleşen"],
+      "min_points":
+          data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Puanı"],
+      "max_points":
+          data_dict[f"{year} Tavan Puan(0,12)"],
+      "min_ranking":
+          data_dict["0,12 Katsayı ile Yerleşen Son Kişinin Başarı Sırası"],
+      "max_ranking":
+          data_dict[f"{year} Tavan Başarı Sırası(0,12)"]
   }
   return {k: v if v != "" else None for k, v in out.items()}
 
@@ -158,7 +168,7 @@ def parse_highschools(df: pd.DataFrame) -> pd.DataFrame:
     # If after the modifications no rows remain the program is empty
     return df
   # Remove Toplam row
-  df = df.loc[df['Lise'] != "Toplam"].reset_index(drop=True)
+  df = df.loc[df['Lise'] != "Toplam"].reset_index(drop=True).fillna(0)
 
   # Parser func to apply to each row
   def parser_func(row):
@@ -179,14 +189,14 @@ def parse_highschools(df: pd.DataFrame) -> pd.DataFrame:
       district = "MERKEZE BAĞLI TAŞRA"
 
     out = pd.Series(
-      [
-        pure_name,
-        city,
-        district,
-        row["Lise'den Yeni Mezun"],
-        row["Önceki Mezun"],
-      ],
-      index=['hs', 'hs_city', 'hs_district', 'new_grad', 'old_grad']
+        [
+            pure_name,
+            city,
+            district,
+            row["Lise'den Yeni Mezun"],
+            row["Önceki Mezun"],
+        ],
+        index=['hs', 'hs_city', 'hs_district', 'new_grad', 'old_grad']
     )
     return out
 
@@ -215,41 +225,54 @@ def crawl_program(idx: str, year: int):
   highschool
     A pandas data frame describing the placement table
   """
-  url = URL.format(year=year, program_id=idx, table_id=tables["ranking"])
+  url = URL.format(year=year, program_id=idx,
+                   table_id=tables["ranking"]).replace(
+                       f"{datetime.now().year}/", ""
+                   )
   browser.get(url)
   # Get the university city
   city = find_element(
-    "/html/body/div[1]/div/div/div[2]/div/h3[1]", timeout_patience=args.timeout_patience
+      "/html/body/div[1]/div/div/div[2]/div/h3[1]",
+      timeout_patience=args.timeout_patience
   ).text
   # Regular expression magic
   city = re.findall(r'\(([^)]+)\)', city)[-1]
 
   # Get the ranking table
   table = find_element(
-    f'//*[@id="icerik_{tables["ranking"]}"]', timeout_patience=args.timeout_patience
+      f'//*[@id="icerik_{tables["ranking"]}"]',
+      timeout_patience=args.timeout_patience
   )
   # Wait for the table to load
   find_element(
-    f'//*[@id="icerik_{tables["ranking"]}"]/table', timeout_patience=args.timeout_patience
+      f'//*[@id="icerik_{tables["ranking"]}"]/table',
+      timeout_patience=args.timeout_patience
   )
 
   # Parse the table using pandas so that python can read it
-  df = pd.read_html(StringIO(table.get_attribute("outerHTML")), thousands='.', decimal=',')
+  df = pd.read_html(
+      StringIO(table.get_attribute("outerHTML")), thousands='.', decimal=','
+  )
   # Parse the tables into useful information
   rankings = parse_rankings(df, args.year)
   rankings.update({"uni_city": city, "year": year})
 
   # Go to the high schools site
-  url = URL.format(year=year, program_id=idx, table_id=tables["highschools"])
+  url = URL.format(year=year, program_id=idx,
+                   table_id=tables["highschools"]).replace(
+                       f"{datetime.now().year}/", ""
+                   )
   browser.get(url)
 
   # Get the high schools table
   table = find_element(
-    f'//*[@id="icerik_{tables["highschools"]}"]', timeout_patience=args.timeout_patience
+      f'//*[@id="icerik_{tables["highschools"]}"]',
+      timeout_patience=args.timeout_patience
   )
   # Wait for the table to load
   find_element(
-    f'//*[@id="icerik_{tables["highschools"]}"]/table', timeout_patience=args.timeout_patience
+      f'//*[@id="icerik_{tables["highschools"]}"]/table',
+      timeout_patience=args.timeout_patience
   )
 
   # Parse the table using pandas so that python can read it
@@ -268,7 +291,8 @@ if __name__ == "__main__":
   # Create the web driver to crawl
   options = webdriver.chrome.options.Options()
   options.add_argument("--headless")
-  service = webdriver.chrome.service.Service(executable_path="./chromedriver")
+  # service = webdriver.chrome.service.Service(executable_path=".\chromedriver")
+  service = webdriver.chrome.service.Service()
   browser = webdriver.Chrome(options=options, service=service)
 
   # Connect to the database
@@ -279,11 +303,37 @@ if __name__ == "__main__":
     programs = list(map(lambda x: x.strip(), f.readlines()))
 
   pbar = tqdm(programs)
+  problematic = []
   for idx in pbar:
-    ranking_data, highschool_data = crawl_program(idx, args.year)
+    try:
+      ranking_data, highschool_data = crawl_program(idx, args.year)
+    except (TimeoutException, WebDriverException):
+      problematic.append((idx, args.year))
+      continue
     pprint(ranking_data)
-    db.write_rankings(ranking_data)
-    if len(highschool_data) != 0:
-      db.write_highschools(highschool_data, idx, args.year)
+    attempts = 0
+    while attempts < 5:
+      try:
+        db.write_rankings(ranking_data)
+        if len(highschool_data) != 0:
+          db.write_highschools(highschool_data, idx, args.year)
+        break
+      except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+          attempts += 1
+          time.sleep(1)
+          continue
+        else:
+          raise
+      except Exception as e:
+        raise
+    else:
+      problematic.append((idx, args.year))
+      continue
+
   browser.close()
   db.close()
+
+  with open(f"problematic_{args.year}.txt", "w") as f:
+    for line in problematic:
+      f.write(" ".join(line) + "\n")
