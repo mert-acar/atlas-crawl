@@ -26,9 +26,7 @@ class CrawlDatabase:
     if self.path == ":memory:" or os.path.exists(self.path):
       self.conn = sl.connect(self.path, check_same_thread=False)
     else:
-      raise FileNotFoundError(
-          f"Pointed database file {self.path} does not exists!"
-      )
+      raise FileNotFoundError(f"Pointed database file {self.path} does not exists!")
 
   @classmethod
   def create_from_schema(cls, *, schema: str, path: Union[str, os.PathLike]):
@@ -87,9 +85,7 @@ class CrawlDatabase:
     VALUES
       (?, ?, ?)
     """
-    cursor.execute(
-        query, (data["uni_name"], data["uni_type"], data["uni_city"])
-    )
+    cursor.execute(query, (data["uni_name"], data["uni_type"], data["uni_city"]))
 
     query = """
     INSERT OR IGNORE INTO
@@ -102,15 +98,10 @@ class CrawlDatabase:
     WHERE
       u.UniversityName = :uni_name;
     """
-    cursor.execute(
-        query, {
-            "uni_name": data["uni_name"],
-            "fac_name": data["fac_name"]
-        }
-    )
+    cursor.execute(query, {"uni_name": data["uni_name"], "fac_name": data["fac_name"]})
 
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       Program (ProgramID, ProgramName, ProgramType, ScholarshipType, FacultyID)
     SELECT
       :prog_id,
@@ -126,14 +117,14 @@ class CrawlDatabase:
       AND f.FacultyName = :fac_name
     """
     cursor.execute(
-        query, {
-            "prog_id": data["dept_id"],
-            "prog_name": data["dept_name"],
-            "prog_type": data["dept_type"],
-            "scholarship": data["scholarship"],
-            "uni_name": data["uni_name"],
-            "fac_name": data["fac_name"],
-        }
+      query, {
+        "prog_id": data["dept_id"],
+        "prog_name": data["dept_name"],
+        "prog_type": data["dept_type"],
+        "scholarship": data["scholarship"],
+        "uni_name": data["uni_name"],
+        "fac_name": data["fac_name"],
+      }
     )
 
     query = """
@@ -151,16 +142,16 @@ class CrawlDatabase:
     );
     """
     cursor.execute(
-        query, {
-            "prog_id": data["dept_id"],
-            "total_quota": data["total_quota"],
-            "total_placed": data["total_placed"],
-            "min_points": data["min_points"],
-            "max_points": data["max_points"],
-            "min_ranking": data["min_ranking"],
-            "max_ranking": data["max_ranking"],
-            "year": data["year"],
-        }
+      query, {
+        "prog_id": data["dept_id"],
+        "total_quota": data["total_quota"],
+        "total_placed": data["total_placed"],
+        "min_points": data["min_points"],
+        "max_points": data["max_points"],
+        "min_ranking": data["min_ranking"],
+        "max_ranking": data["max_ranking"],
+        "year": data["year"],
+      }
     )
     self.conn.commit()
 
@@ -172,10 +163,8 @@ class CrawlDatabase:
     VALUES (?, ?, ?, NULL, NULL, NULL)
     """
     cursor.executemany(
-        query, [
-            (x.hs, x.hs_city, x.hs_district)
-            for x in df[["hs", "hs_city", "hs_district"]].itertuples()
-        ]
+      query,
+      [(x.hs, x.hs_city, x.hs_district) for x in df[["hs", "hs_city", "hs_district"]].itertuples()]
     )
 
     query = """
@@ -193,19 +182,17 @@ class CrawlDatabase:
       h.HighSchoolName = :hs_name AND h.City = :hs_city AND h.District = :hs_district
     """
     cursor.executemany(
-        query, [
-            {
-                "prog_id": program_id,
-                "year": year,
-                "new_grads": int(x.new_grad),
-                "old_grads": int(x.old_grad),
-                "hs_name": x.hs,
-                "hs_city": x.hs_city,
-                "hs_district": x.hs_district
-            } for x in df[[
-                "hs", "hs_city", "hs_district", "new_grad", "old_grad"
-            ]].itertuples()
-        ]
+      query, [
+        {
+          "prog_id": program_id,
+          "year": year,
+          "new_grads": int(x.new_grad),
+          "old_grads": int(x.old_grad),
+          "hs_name": x.hs,
+          "hs_city": x.hs_city,
+          "hs_district": x.hs_district
+        } for x in df[["hs", "hs_city", "hs_district", "new_grad", "old_grad"]].itertuples()
+      ]
     )
     self.conn.commit()
 
@@ -219,8 +206,6 @@ if __name__ == "__main__":
     schema = f.read()
 
   try:
-    db = CrawlDatabase.create_from_schema(
-        schema=schema, path="../data/crawl_database.db"
-    )
+    db = CrawlDatabase.create_from_schema(schema=schema, path="../data/crawl_database.db")
   except FileExistsError as e:
     print(e)

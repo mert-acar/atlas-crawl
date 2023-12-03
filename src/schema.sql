@@ -21,7 +21,7 @@ CREATE TABLE Program (
     FacultyID INTEGER NOT NULL,
     ProgramName TEXT NOT NULL,
     ScholarshipType TEXT,
-    ProgramType TEXT CHECK(ProgramType IN ('SAY', 'SOZ', 'DIL', 'EA')),
+    ProgramType TEXT CHECK(ProgramType IN ('SAY', 'SÖZ', 'DİL', 'EA')),
     UNIQUE (FacultyID, ProgramName, ScholarshipType, ProgramType),
     FOREIGN KEY (FacultyID) REFERENCES Faculty(FacultyID)
 );
