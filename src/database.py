@@ -13,6 +13,7 @@ db_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(mes
 db_handler.setFormatter(db_formatter)
 db_logger.addHandler(db_handler)
 
+
 class CrawlDatabase:
   """
   Python abstraction for an SQLite database. Built specifically for Atlas-Crawl
@@ -243,9 +244,8 @@ class CrawlDatabase:
 
 
 if __name__ == "__main__":
-  with open("./schema.sql", "r") as f:
+  with open("./schema.sql", "r", encoding="utf-8") as f:
     schema = f.read()
-
   try:
     db = CrawlDatabase.create_from_schema(schema=schema, path="../data/crawl_database.db")
   except FileExistsError as e:

@@ -22,7 +22,7 @@ CREATE TABLE Program (
     ProgramName TEXT NOT NULL,
     ScholarshipType TEXT,
     ProgramType TEXT CHECK(ProgramType IN ('SAY', 'SÖZ', 'DİL', 'EA')),
-    UNIQUE (FacultyID, ProgramName, ScholarshipType, ProgramType),
+    UNIQUE (ProgramID, FacultyID, ProgramName, ScholarshipType, ProgramType),
     FOREIGN KEY (FacultyID) REFERENCES Faculty(FacultyID)
 );
 

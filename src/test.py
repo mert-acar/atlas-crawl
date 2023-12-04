@@ -133,19 +133,23 @@ def check_foreign_keys(db: CrawlDatabase):
       count = cursor.fetchone()[0]
 
       if count > 0:
-        print(f"+ Integrity check failed: {count} record(s) in {table}.{from_column} not found in {ref_table}.{ref_column} ❌")
+        print(
+          f"+ Integrity check failed: {count} record(s) in {table}.{from_column} not found in {ref_table}.{ref_column} ❌"
+        )
       else:
-        print(f"+ Integrity check passed for {table}.{from_column} referencing {ref_table}.{ref_column} ✅")
+        print(
+          f"+ Integrity check passed for {table}.{from_column} referencing {ref_table}.{ref_column} ✅"
+        )
 
 
 if __name__ == "__main__":
   from pprint import pprint
-  db = CrawlDatabase("../data/old.db")
+  db = CrawlDatabase("../data/crawl_database.db")
   # SCHEMA TESTS
   result = test_referential_integrity(db)
   print(f"+ Referential integrity test ... {'passed ✅' if result else 'failed ❌'}")
   result = test_unique_constraint(db)
   print(f"+ Unique constraint test ... {'passed ✅' if result else 'failed ❌'}")
-  
+
   # DATA INTEGRITY TESTS
   check_foreign_keys(db)
