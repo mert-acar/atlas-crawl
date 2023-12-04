@@ -1,7 +1,17 @@
 import os
+import logging
 import pandas as pd
 import sqlite3 as sl
 from typing import Union, Dict, Any
+
+# Set up logging
+logging.basicConfig(
+  filename='../logs/db_operations.log',
+  filemode='a',
+  format='%(asctime)s - %(levelname)s - %(message)s',
+  level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 
 class CrawlDatabase:
@@ -77,29 +87,56 @@ class CrawlDatabase:
       cursor.execute(query_str, query_args)
       self.conn.commit()
 
-  def write_rankings(self, data: Dict[str, Any]):
+  def thread_safe_write(self, query: str, *args, many: bool = False) -> bool:
     cursor = self.conn.cursor()
+    attempts = 0
+    while attempts < 5:
+      try:
+        if many:
+          cursor.executemany(query, *args)
+        else:
+          cursor.execute(query, *args)
+        self.conn.commit()
+        return True
+      except sl.Error as e:
+        if "UNIQUE" in str(e):
+          return True
+        else:
+          logger.error(
+            f"Write error: {e} for query {query} with arguments {args}, retrying in 0.05 seconds"
+          )
+          time.sleep(0.05)
+          attempts += 1
+    logger.error(f"Failed to write data {args} after 5 attempts")
+    return False
+
+  def write_university(self, uni_name: str, uni_type: str, uni_city: str, **kwargs) -> bool:
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       University (UniversityName, UniversityType, UniversityCity)
     VALUES
       (?, ?, ?)
     """
-    cursor.execute(query, (data["uni_name"], data["uni_type"], data["uni_city"]))
+    return self.thread_safe_write(query, (uni_name, uni_type, uni_city))
 
+  def write_faculty(self, uni_name: str, fac_name: str, **kwargs) -> bool:
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       Faculty (UniversityID, FacultyName)
     SELECT
-      u.rowid,
+      u.UniversityID,
       :fac_name
     FROM
       University u
     WHERE
       u.UniversityName = :uni_name;
     """
-    cursor.execute(query, {"uni_name": data["uni_name"], "fac_name": data["fac_name"]})
+    return self.thread_safe_write(query, {"uni_name": uni_name, "fac_name": fac_name})
 
+  def write_program(
+    self, dept_id: int, dept_name: str, dept_type: str, scholarship: str, uni_name: str,
+    fac_name: str, **kwargs
+  ) -> bool:
     query = """
     INSERT INTO
       Program (ProgramID, ProgramName, ProgramType, ScholarshipType, FacultyID)
@@ -108,27 +145,32 @@ class CrawlDatabase:
       :prog_name,
       :prog_type,
       :scholarship,
-      f.rowid
+      f.FacultyID
     FROM
       University u
-      JOIN Faculty f ON u.rowid = f.UniversityID
+      JOIN Faculty f ON u.UniversityID = f.UniversityID
     WHERE
       u.UniversityName = :uni_name
       AND f.FacultyName = :fac_name
     """
-    cursor.execute(
+    return self.thread_safe_write(
       query, {
-        "prog_id": data["dept_id"],
-        "prog_name": data["dept_name"],
-        "prog_type": data["dept_type"],
-        "scholarship": data["scholarship"],
-        "uni_name": data["uni_name"],
-        "fac_name": data["fac_name"],
+        "prog_id": dept_id,
+        "prog_name": dept_name,
+        "prog_type": dept_type,
+        "scholarship": scholarship,
+        "uni_name": uni_name,
+        "fac_name": fac_name,
       }
     )
 
+  def write_placement(
+    self, dept_id: int, total_quota: int, total_placed: Union[int, None],
+    min_points: Union[float, None], max_points: Union[float, None], min_ranking: Union[int, None],
+    max_ranking: Union[int, None], year: int, **kwargs
+  ) -> bool:
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       PlacementData (ProgramID, TotalQuota, TotalPlaced, LowestScore, HighestScore, MinimumRanking, MaximumRanking, Year)
     VALUES (
       :prog_id,
@@ -141,34 +183,34 @@ class CrawlDatabase:
       :year
     );
     """
-    cursor.execute(
+    return self.thread_safe_write(
       query, {
-        "prog_id": data["dept_id"],
-        "total_quota": data["total_quota"],
-        "total_placed": data["total_placed"],
-        "min_points": data["min_points"],
-        "max_points": data["max_points"],
-        "min_ranking": data["min_ranking"],
-        "max_ranking": data["max_ranking"],
-        "year": data["year"],
+        "prog_id": dept_id,
+        "total_quota": total_quota,
+        "total_placed": total_placed,
+        "min_points": min_points,
+        "max_points": max_points,
+        "min_ranking": min_ranking,
+        "max_ranking": max_ranking,
+        "year": year,
       }
     )
-    self.conn.commit()
 
-  def write_highschools(self, df: pd.DataFrame, program_id: int, year: int):
-    cursor = self.conn.cursor()
+  def write_highschools(self, df: pd.DataFrame) -> bool:
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       HighSchool (HighSchoolName, City, District, CounselorName, CounselorPhone, CounselorEmail)
     VALUES (?, ?, ?, NULL, NULL, NULL)
     """
-    cursor.executemany(
+    return self.thread_safe_write(
       query,
-      [(x.hs, x.hs_city, x.hs_district) for x in df[["hs", "hs_city", "hs_district"]].itertuples()]
+      [(x.hs, x.hs_city, x.hs_district) for x in df[["hs", "hs_city", "hs_district"]].itertuples()],
+      many=True
     )
 
+  def write_highschool_placements(self, df: pd.DataFrame, program_id: int, year: int) -> bool:
     query = """
-    INSERT OR IGNORE INTO
+    INSERT INTO
       HighSchoolPlacement (HighSchoolID, ProgramID, Year, NumberOfNewGrads, NumberOfOldGrads)
     SELECT
       h.rowid,
@@ -181,7 +223,7 @@ class CrawlDatabase:
     WHERE
       h.HighSchoolName = :hs_name AND h.City = :hs_city AND h.District = :hs_district
     """
-    cursor.executemany(
+    return self.thread_safe_write(
       query, [
         {
           "prog_id": program_id,
@@ -192,11 +234,11 @@ class CrawlDatabase:
           "hs_city": x.hs_city,
           "hs_district": x.hs_district
         } for x in df[["hs", "hs_city", "hs_district", "new_grad", "old_grad"]].itertuples()
-      ]
+      ],
+      many=True
     )
-    self.conn.commit()
 
-  def close(self):
+  def __del__(self):
     """ Close the connection to database gracefully """
     self.conn.close()
 

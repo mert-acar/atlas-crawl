@@ -1,5 +1,6 @@
 import re
 import time
+import logging
 
 import pandas as pd
 from tqdm import tqdm
@@ -7,7 +8,6 @@ from io import StringIO
 from datetime import datetime
 from typing import Union, Tuple
 from database import CrawlDatabase
-from sqlite3 import OperationalError
 from argparse import ArgumentParser, Namespace
 
 # Selenium Imports
@@ -17,9 +17,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
+# Set up logging
+logging.basicConfig(
+  filename='../logs/crawl_operations.log',
+  filemode='a',
+  format='%(asctime)s - %(levelname)s - %(message)s',
+  level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 URL = "https://yokatlas.yok.gov.tr/{year}/lisans-panel.php?y={program_id}&p={table_id}"
 tables = {"ranking": "1000_1", "highschools": "1060"}
-
 
 def parse_arguments() -> Namespace:
   """ Argument parser for the crawler CLI """
@@ -90,6 +98,9 @@ def parse_rankings(dfs: list[pd.DataFrame], year: int) -> dict:
   dfs
     Pandas parses the HTML into a standard DF. Pass it here to make it suitable for
     the database.
+
+  year
+    The for which the data was crawled
 
   Returns
   -------
@@ -195,12 +206,15 @@ def crawl_program(
   idx: str,
   year: int,
   timeout_patience: int = 5
-) -> Tuple[dict, pd.DataFrame]:
+) -> Union[Tuple[dict, pd.DataFrame], bool]:
   """
   Crawl the program page for the rankings and high school placements
 
   Parameters
   ==========
+  browser
+    The webdriver instance to simulate the page visits and get the response
+
   idx
     The program id assigned by the Council of Higher Education
 
@@ -221,22 +235,32 @@ def crawl_program(
   """
   url = URL.format(year=year, program_id=idx,
                    table_id=tables["ranking"]).replace(f"{datetime.now().year}/", "")
-  browser.get(url)
-  # Get the university city
-  city = find_element(
-    browser, "/html/body/div[1]/div/div/div[2]/div/h3[1]", timeout_patience=timeout_patience
-  ).text
-  # Regular expression magic
-  city = re.findall(r'\(([^)]+)\)', city)[-1]
+  attempts = 0
+  while attempts < 5:
+    try:
+      browser.get(url)
+      # Get the university city
+      city = find_element(
+        browser, "/html/body/div[1]/div/div/div[2]/div/h3[1]", timeout_patience=timeout_patience
+      ).text
+      # Regular expression magic
+      city = re.findall(r'\(([^)]+)\)', city)[-1]
 
-  # Get the ranking table
-  table = find_element(
-    browser, f'//*[@id="icerik_{tables["ranking"]}"]', timeout_patience=timeout_patience
-  )
-  # Wait for the table to load
-  find_element(
-    browser, f'//*[@id="icerik_{tables["ranking"]}"]/table', timeout_patience=timeout_patience
-  )
+      # Get the ranking table
+      table = find_element(
+        browser, f'//*[@id="icerik_{tables["ranking"]}"]', timeout_patience=timeout_patience
+      )
+      # Wait for the table to load
+      find_element(
+        browser, f'//*[@id="icerik_{tables["ranking"]}"]/table', timeout_patience=timeout_patience
+      )
+      break
+    except (TimeoutException, WebDriverException):
+      attempts += 1
+      time.sleep(1)
+      continue
+  else:
+    return False
 
   # Parse the table using pandas so that python can read it
   df = pd.read_html(StringIO(table.get_attribute("outerHTML")), thousands='.', decimal=',')
@@ -247,16 +271,27 @@ def crawl_program(
   # Go to the high schools site
   url = URL.format(year=year, program_id=idx,
                    table_id=tables["highschools"]).replace(f"{datetime.now().year}/", "")
-  browser.get(url)
+  attempts = 0
+  while attempts < 5:
+    try:
+      browser.get(url)
 
-  # Get the high schools table
-  table = find_element(
-    browser, f'//*[@id="icerik_{tables["highschools"]}"]', timeout_patience=timeout_patience
-  )
-  # Wait for the table to load
-  find_element(
-    browser, f'//*[@id="icerik_{tables["highschools"]}"]/table', timeout_patience=timeout_patience
-  )
+      # Get the high schools table
+      table = find_element(
+        browser, f'//*[@id="icerik_{tables["highschools"]}"]', timeout_patience=timeout_patience
+      )
+      # Wait for the table to load
+      find_element(
+        browser,
+        f'//*[@id="icerik_{tables["highschools"]}"]/table',
+        timeout_patience=timeout_patience
+      )
+    except (TimeoutException, WebDriverException):
+      attempts += 1
+      time.sleep(1)
+      continue
+  else:
+    return False
 
   # Parse the table using pandas so that python can read it
   df = pd.read_html(StringIO(table.get_attribute("outerHTML")))
@@ -286,48 +321,20 @@ if __name__ == "__main__":
     programs = list(map(lambda x: x.strip(), f.readlines()))
 
   pbar = tqdm(programs)
-  problematic = []
   for idx in pbar:
-    attempts = 0
-    while attempts < 5:
-      try:
-        ranking_data, highschool_data = crawl_program(
-          browser, idx, args.year, args.timeout_patience
-        )
-        break
-      except (TimeoutException, WebDriverException):
-        attempts += 1
-        time.sleep(1)
-        continue
-    else:
-      problematic.append((idx, args.year))
+    results = crawl_program(browser, idx, args.year, args.timeout_patience)
+    if results == False:
+      logger.error(f"Could not crawl: {idx, args.year}")
       continue
-
+    ranking_data, highschool_data = results
     pprint(ranking_data)
 
-    attempts = 0
-    while attempts < 5:
-      try:
-        db.write_rankings(ranking_data)
-        if len(highschool_data) != 0:
-          db.write_highschools(highschool_data, idx, args.year)
-        break
-      except OperationalError as e:
-        if "database is locked" in str(e):
-          attempts += 1
-          time.sleep(1)
-          continue
-        else:
-          raise
-      except Exception as e:
-        raise
-    else:
-      problematic.append((idx, args.year))
-      continue
+    db.write_university(**ranking_data)
+    db.write_faculty(**ranking_data)
+    db.write_program(**ranking_data)
+    db.write_placement(**ranking_data)
+    if len(highschool_data) != 0:
+      db.write_highschools(highschool_data)
+      db.write_highschool_placements(highschool_data, idx, args.year)
 
   browser.close()
-  db.close()
-
-  with open(f"problematic_{args.year}.txt", "w") as f:
-    for line in problematic:
-      f.write(" ".join(map(str, line)) + "\n")

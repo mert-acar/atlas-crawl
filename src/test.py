@@ -4,7 +4,7 @@ from database import CrawlDatabase
 from sqlite3 import Error, IntegrityError
 
 
-def test_unique_constraint(db):
+def test_unique_constraint(db: CrawlDatabase) -> bool:
   """ Test the unique constraint on the UniversityName field in the University table """
   passed = False
   try:
@@ -38,7 +38,7 @@ def test_unique_constraint(db):
   return passed
 
 
-def test_referential_integrity(db):
+def test_referential_integrity(db: CrawlDatabase) -> bool:
   """ Test the referential integrity between Faculty and University tables with foreign key enforcement """
   passed = False
   try:
@@ -97,15 +97,55 @@ def test_referential_integrity(db):
   return passed
 
 
-if __name__ == "__main__":
-  with open("./schema.sql", "r") as f:
-    schema = f.read()
-  db = CrawlDatabase.create_from_schema(schema=schema, path=":memory:")
+def check_foreign_keys(db: CrawlDatabase):
+  """
+  Function to check the integrity of foreign keys in an SQLite database.
 
-  # TESTS
+  Args:
+  db: Database object handle
+  """
+
+  cursor = db.conn.cursor()
+  # SQL query to get the list of tables with foreign keys
+  cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+  tables = [table[0] for table in cursor.fetchall()]
+
+  for table in tables:
+    # Get foreign key details for each table
+    cursor.execute(f"PRAGMA foreign_key_list({table});")
+    foreign_keys = cursor.fetchall()
+
+    # Check each foreign key
+    for fk in foreign_keys:
+      ref_table = fk[2]  # Referenced table
+      ref_column = fk[4]  # Referenced column
+      from_column = fk[3]  # Column in the current table
+
+      # Check if each value in the foreign key column exists in the referenced column of the referenced table
+      cursor.execute(
+        f"""
+        SELECT COUNT(*) 
+        FROM {table} 
+        WHERE {from_column} NOT IN (SELECT {ref_column} FROM {ref_table})
+        AND {from_column} IS NOT NULL;
+        """
+      )
+      count = cursor.fetchone()[0]
+
+      if count > 0:
+        print(f"+ Integrity check failed: {count} record(s) in {table}.{from_column} not found in {ref_table}.{ref_column} ❌")
+      else:
+        print(f"+ Integrity check passed for {table}.{from_column} referencing {ref_table}.{ref_column} ✅")
+
+
+if __name__ == "__main__":
+  from pprint import pprint
+  db = CrawlDatabase("../data/old.db")
+  # SCHEMA TESTS
   result = test_referential_integrity(db)
   print(f"+ Referential integrity test ... {'passed ✅' if result else 'failed ❌'}")
   result = test_unique_constraint(db)
   print(f"+ Unique constraint test ... {'passed ✅' if result else 'failed ❌'}")
-
-  db.close()
+  
+  # DATA INTEGRITY TESTS
+  check_foreign_keys(db)
