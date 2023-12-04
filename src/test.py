@@ -201,7 +201,7 @@ def check_all_placement_consistency(db: CrawlDatabase):
       )
 
   if len(results) == 0:
-    results.append(f"+ Data is consistent for ProgramID {program_id}, Year {year}. ✅")
+    results.append(f"+ Data is consistent with respect to TotalPlaced and sum of grads. ✅")
   else:
     print(f"+ {len(results)} inconsistent results found:")
 
