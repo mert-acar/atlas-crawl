@@ -161,8 +161,7 @@ def check_all_placement_consistency(db: CrawlDatabase):
   cursor.execute("""
     SELECT ProgramID, Year 
     FROM PlacementData;
-    """
-  )
+    """)
   program_years = cursor.fetchall()
 
   results = []
@@ -193,6 +192,9 @@ def check_all_placement_consistency(db: CrawlDatabase):
       sum_grads = 0
 
     # Compare TotalPlaced with the sum of grads
+    if total_placed is None and sum_grads == 0:
+      total_placed = 0
+
     if total_placed != sum_grads:
       results.append(
         f"+ Data inconsistency found for ProgramID {program_id}, Year {year}: TotalPlaced is {total_placed}, but sum of grads is {sum_grads}. ❌"
@@ -200,6 +202,8 @@ def check_all_placement_consistency(db: CrawlDatabase):
 
   if len(results) == 0:
     results.append(f"+ Data is consistent for ProgramID {program_id}, Year {year}. ✅")
+  else:
+    print(f"+ {len(results)} inconsistent results found:")
 
   for line in results:
     print(line)

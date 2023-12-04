@@ -87,15 +87,12 @@ class CrawlDatabase:
       cursor.execute(query_str, query_args)
       self.conn.commit()
 
-  def thread_safe_write(self, query: str, *args, many: bool = False) -> bool:
+  def thread_safe_write(self, query: str, *args) -> bool:
     cursor = self.conn.cursor()
     attempts = 0
     while attempts < 5:
       try:
-        if many:
-          cursor.executemany(query, *args)
-        else:
-          cursor.execute(query, *args)
+        cursor.execute(query, *args)
         self.conn.commit()
         return True
       except sl.Error as e:
@@ -200,13 +197,14 @@ class CrawlDatabase:
     query = """
     INSERT INTO
       HighSchool (HighSchoolName, City, District, CounselorName, CounselorPhone, CounselorEmail)
-    VALUES (?, ?, ?, NULL, NULL, NULL)
+    VALUES (?, ?, ?, ?, ?, ?)
     """
-    return self.thread_safe_write(
-      query,
-      [(x.hs, x.hs_city, x.hs_district) for x in df[["hs", "hs_city", "hs_district"]].itertuples()],
-      many=True
-    )
+    results = []
+    for x in df[["hs", "hs_city", "hs_district"]].itertuples():
+      results.append(
+        self.thread_safe_write(query, (x.hs, x.hs_city, x.hs_district, None, None, None))
+      )
+    return all(results)
 
   def write_highschool_placements(self, df: pd.DataFrame, program_id: int, year: int) -> bool:
     query = """
@@ -223,20 +221,19 @@ class CrawlDatabase:
     WHERE
       h.HighSchoolName = :hs_name AND h.City = :hs_city AND h.District = :hs_district
     """
-    return self.thread_safe_write(
-      query, [
-        {
-          "prog_id": program_id,
-          "year": year,
-          "new_grads": int(x.new_grad),
-          "old_grads": int(x.old_grad),
-          "hs_name": x.hs,
-          "hs_city": x.hs_city,
-          "hs_district": x.hs_district
-        } for x in df[["hs", "hs_city", "hs_district", "new_grad", "old_grad"]].itertuples()
-      ],
-      many=True
-    )
+    results = []
+    for x in df[["hs", "hs_city", "hs_district", "new_grad", "old_grad"]].itertuples():
+      arg = {
+        "prog_id": program_id,
+        "year": year,
+        "new_grads": int(x.new_grad),
+        "old_grads": int(x.old_grad),
+        "hs_name": x.hs,
+        "hs_city": x.hs_city,
+        "hs_district": x.hs_district
+      }
+      results.append(self.thread_safe_write(query, arg))
+    return all(results)
 
   def __del__(self):
     """ Close the connection to database gracefully """
