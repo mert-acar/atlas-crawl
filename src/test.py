@@ -1,5 +1,7 @@
 """ Test script for database validation during schema development """
 
+from tqdm import tqdm
+from pprint import pprint
 from database import CrawlDatabase
 from sqlite3 import Error, IntegrityError
 
@@ -142,8 +144,68 @@ def check_foreign_keys(db: CrawlDatabase):
         )
 
 
+def check_all_placement_consistency(db: CrawlDatabase):
+  """
+  Function to check the consistency of PlacementData with HighSchoolPlacement for all ProgramID and Year combinations.
+
+  Args:
+  db_path (str): Path to the SQLite database.
+
+  Returns:
+  List[str]: A list of messages indicating the consistency status for each ProgramID and Year.
+  """
+
+  cursor = db.conn.cursor()
+
+  # Query to get all ProgramID and Year combinations from PlacementData
+  cursor.execute("""
+    SELECT ProgramID, Year 
+    FROM PlacementData;
+    """
+  )
+  program_years = cursor.fetchall()
+
+  results = []
+
+  for program_id, year in tqdm(program_years, leave=False):
+    # Query to get TotalPlaced from PlacementData
+    cursor.execute(
+      """
+      SELECT TotalPlaced 
+      FROM PlacementData 
+      WHERE ProgramID = ? AND Year = ?;
+      """, (program_id, year)
+    )
+    total_placed = cursor.fetchone()[0]
+
+    # Query to get the sum of NumberOfNewGrads and NumberOfOldGrads from HighSchoolPlacement
+    cursor.execute(
+      """
+      SELECT SUM(NumberOfNewGrads + NumberOfOldGrads) 
+      FROM HighSchoolPlacement 
+      WHERE ProgramID = ? AND Year = ?;
+      """, (program_id, year)
+    )
+    sum_grads = cursor.fetchone()[0]
+
+    # If sum_grads is None, there are no corresponding records in HighSchoolPlacement
+    if sum_grads is None:
+      sum_grads = 0
+
+    # Compare TotalPlaced with the sum of grads
+    if total_placed != sum_grads:
+      results.append(
+        f"+ Data inconsistency found for ProgramID {program_id}, Year {year}: TotalPlaced is {total_placed}, but sum of grads is {sum_grads}. ❌"
+      )
+
+  if len(results) == 0:
+    results.append(f"+ Data is consistent for ProgramID {program_id}, Year {year}. ✅")
+
+  for line in results:
+    print(line)
+
+
 if __name__ == "__main__":
-  from pprint import pprint
   db = CrawlDatabase("../data/crawl_database.db")
   # SCHEMA TESTS
   result = test_referential_integrity(db)
@@ -153,3 +215,4 @@ if __name__ == "__main__":
 
   # DATA INTEGRITY TESTS
   check_foreign_keys(db)
+  check_all_placement_consistency(db)
