@@ -1,18 +1,17 @@
 import os
+import time
 import logging
 import pandas as pd
 import sqlite3 as sl
 from typing import Union, Dict, Any
 
 # Set up logging
-logging.basicConfig(
-  filename='../logs/db_operations.log',
-  filemode='a',
-  format='%(asctime)s - %(levelname)s - %(message)s',
-  level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
+db_logger = logging.getLogger("db_logger")
+db_logger.setLevel(logging.INFO)
+db_handler = logging.FileHandler("../logs/db_operations.log")
+db_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+db_handler.setFormatter(db_formatter)
+db_logger.addHandler(db_handler)
 
 class CrawlDatabase:
   """
@@ -102,12 +101,12 @@ class CrawlDatabase:
         if "UNIQUE" in str(e):
           return True
         else:
-          logger.error(
+          db_logger.error(
             f"Write error: {e} for query {query} with arguments {args}, retrying in 0.05 seconds"
           )
           time.sleep(0.05)
           attempts += 1
-    logger.error(f"Failed to write data {args} after 5 attempts")
+    db_logger.error(f"Failed to write data {args} after 5 attempts")
     return False
 
   def write_university(self, uni_name: str, uni_type: str, uni_city: str, **kwargs) -> bool:

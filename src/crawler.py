@@ -18,16 +18,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 # Set up logging
-logging.basicConfig(
-  filename='../logs/crawl_operations.log',
-  filemode='a',
-  format='%(asctime)s - %(levelname)s - %(message)s',
-  level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+c_logger = logging.getLogger("c_logger")
+c_logger.setLevel(logging.INFO)
+c_handler = logging.FileHandler("../logs/crawl_operations.log")
+c_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+c_handler.setFormatter(c_formatter)
+c_logger.addHandler(c_handler)
 
 URL = "https://yokatlas.yok.gov.tr/{year}/lisans-panel.php?y={program_id}&p={table_id}"
 tables = {"ranking": "1000_1", "highschools": "1060"}
+
 
 def parse_arguments() -> Namespace:
   """ Argument parser for the crawler CLI """
@@ -236,7 +236,7 @@ def crawl_program(
   url = URL.format(year=year, program_id=idx,
                    table_id=tables["ranking"]).replace(f"{datetime.now().year}/", "")
   attempts = 0
-  while attempts < 5:
+  while attempts < 3:
     try:
       browser.get(url)
       # Get the university city
@@ -257,7 +257,7 @@ def crawl_program(
       break
     except (TimeoutException, WebDriverException):
       attempts += 1
-      time.sleep(1)
+      time.sleep(0.5)
       continue
   else:
     return False
@@ -272,7 +272,7 @@ def crawl_program(
   url = URL.format(year=year, program_id=idx,
                    table_id=tables["highschools"]).replace(f"{datetime.now().year}/", "")
   attempts = 0
-  while attempts < 5:
+  while attempts < 3:
     try:
       browser.get(url)
 
@@ -286,9 +286,10 @@ def crawl_program(
         f'//*[@id="icerik_{tables["highschools"]}"]/table',
         timeout_patience=timeout_patience
       )
+      break
     except (TimeoutException, WebDriverException):
       attempts += 1
-      time.sleep(1)
+      time.sleep(0.5)
       continue
   else:
     return False
@@ -324,7 +325,7 @@ if __name__ == "__main__":
   for idx in pbar:
     results = crawl_program(browser, idx, args.year, args.timeout_patience)
     if results == False:
-      logger.error(f"Could not crawl: {idx, args.year}")
+      c_logger.error(f"Could not crawl: {idx, args.year}")
       continue
     ranking_data, highschool_data = results
     pprint(ranking_data)
