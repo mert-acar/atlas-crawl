@@ -1,7 +1,7 @@
 """ Test script for database validation during schema development """
 
+import pandas as pd
 from tqdm import tqdm
-from pprint import pprint
 from database import CrawlDatabase
 from sqlite3 import Error, IntegrityError
 
@@ -149,7 +149,7 @@ def check_all_placement_consistency(db: CrawlDatabase):
   Function to check the consistency of PlacementData with HighSchoolPlacement for all ProgramID and Year combinations.
 
   Args:
-  db_path (str): Path to the SQLite database.
+  db (CrawlDatabase): CrawlDatabase object for database connection handling
 
   Returns:
   List[str]: A list of messages indicating the consistency status for each ProgramID and Year.
@@ -157,56 +157,39 @@ def check_all_placement_consistency(db: CrawlDatabase):
 
   cursor = db.conn.cursor()
 
-  # Query to get all ProgramID and Year combinations from PlacementData
-  cursor.execute("""
-    SELECT ProgramID, Year 
+  # Execute SQL queries and read data into Pandas DataFrames
+  placement_df = db.query(
+    """
+    SELECT ProgramID, Year, TotalPlaced
     FROM PlacementData;
-    """)
-  program_years = cursor.fetchall()
+    """
+  )
+  high_school_df = db.query(
+    """
+    SELECT ProgramID, Year, SUM(NumberOfNewGrads + NumberOfOldGrads) AS SumGrads
+    FROM HighSchoolPlacement
+    GROUP BY ProgramID, Year;
+    """
+  )
+  # Merge the DataFrames on ProgramID and Year
+  merged_df = pd.merge(placement_df, high_school_df, on=['ProgramID', 'Year'], how='left')
 
-  results = []
-
-  for program_id, year in tqdm(program_years, leave=False):
-    # Query to get TotalPlaced from PlacementData
-    cursor.execute(
-      """
-      SELECT TotalPlaced 
-      FROM PlacementData 
-      WHERE ProgramID = ? AND Year = ?;
-      """, (program_id, year)
-    )
-    total_placed = cursor.fetchone()[0]
-
-    # Query to get the sum of NumberOfNewGrads and NumberOfOldGrads from HighSchoolPlacement
-    cursor.execute(
-      """
-      SELECT SUM(NumberOfNewGrads + NumberOfOldGrads) 
-      FROM HighSchoolPlacement 
-      WHERE ProgramID = ? AND Year = ?;
-      """, (program_id, year)
-    )
-    sum_grads = cursor.fetchone()[0]
-
-    # If sum_grads is None, there are no corresponding records in HighSchoolPlacement
-    if sum_grads is None:
-      sum_grads = 0
-
+  # Replace NaN with 0 for TotalPlaced and SumGrads
+  merged_df.fillna({'TotalPlaced': 0, 'SumGrads': 0}, inplace=True)
+  good = True
+  # Iterate through the merged DataFrame
+  for index, row in merged_df.iterrows():
+    # Extract values
+    total_placed = row['TotalPlaced']
+    sum_grads = row['SumGrads']
     # Compare TotalPlaced with the sum of grads
-    if total_placed is None and sum_grads == 0:
-      total_placed = 0
-
     if total_placed != sum_grads:
-      results.append(
-        f"+ Data inconsistency found for ProgramID {program_id}, Year {year}: TotalPlaced is {total_placed}, but sum of grads is {sum_grads}. ❌"
+      good = False
+      print(
+        f"+ Data inconsistency found for ProgramID {row['ProgramID']}, Year {row['Year']}: TotalPlaced is {total_placed}, but sum of grads is {sum_grads}. ❌"
       )
-
-  if len(results) == 0:
-    results.append(f"+ Data is consistent with respect to TotalPlaced and sum of grads. ✅")
-  else:
-    print(f"+ {len(results)} inconsistent results found:")
-
-  for line in results:
-    print(line)
+  if good:
+    print(f"+ Data is consistent with respect to TotalPlaced and sum of grads. ✅")
 
 
 if __name__ == "__main__":
