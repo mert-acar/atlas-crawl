@@ -211,7 +211,7 @@ def crawl_program(
   Crawl the program page for the rankings and high school placements
 
   Parameters
-  ==========
+  ----------
   browser
     The webdriver instance to simulate the page visits and get the response
 
@@ -225,7 +225,7 @@ def crawl_program(
     Timeout patience for waiting a response from the site
 
   Returns
-  =======
+  -------
   rankings
     A dictionary describing the ranking data like total quota, total placed,
     minimum ranking etc.

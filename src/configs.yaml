@@ -1,0 +1,9 @@
+db_path: ../data/crawl_database.db
+
+uni_defaults:
+  - İHSAN DOĞRAMACI BİLKENT ÜNİVERSİTESİ
+  - ORTA DOĞU TEKNİK ÜNİVERSİTESİ
+  - SABANCI ÜNİVERSİTESİ
+  - KOÇ ÜNİVERSİTESİ
+  - İSTANBUL TEKNİK ÜNİVERSİTESİ
+  - BOĞAZİÇİ ÜNİVERSİTESİ

@@ -3,6 +3,7 @@ import time
 import logging
 import pandas as pd
 import sqlite3 as sl
+import streamlit as st
 from typing import Union, Dict, Any
 
 # Set up logging
@@ -20,6 +21,8 @@ class CrawlDatabase:
 
   Can run queries to populate the database with crawl data or can request data with
   pre-determined queries. Exposes the dataset cursor for custom queries.
+
+  _get_ functions are cached for performance in streamlit engine
 
   Parameters
   ----------
@@ -44,14 +47,14 @@ class CrawlDatabase:
     Create database that supports foreign keys from a schema.
 
     Parameters
-    -----------
+    ----------
     schema
       SQL schema to define the database structure.
     path
       Path to save the database.
 
     Returns
-    ---------
+    -------
     db
       Handle for the created database.
 
@@ -234,6 +237,35 @@ class CrawlDatabase:
       }
       results.append(self.thread_safe_write(query, arg))
     return all(results)
+
+  @st.cache_data
+  def get_hs_filter_data(_self) -> pd.DataFrame:
+    """ Query the HighSchool table """
+    query = """ SELECT HighSchoolName, City, District, Score FROM HighSchool """
+    df = _self.query(query)
+    return df
+
+  @st.cache_data
+  def get_uni_filter_data(_self) -> pd.DataFrame:
+    """ 
+    Query the tables University, Faculty and Program tables for the filters in the analysis page
+    """
+    query = """
+    SELECT
+      u.UniversityName,
+      u.UniversityType,
+      u.UniversityCity,
+      f.FacultyName,
+      p.ProgramName,
+      p.ScholarshipType,
+      p.ProgramType
+    FROM
+      University u
+      JOIN Faculty f ON f.UniversityID = u.UniversityID
+      JOIN Program p ON p.FacultyID = f.FacultyID;
+    """
+    df = _self.query(query)
+    return df
 
   def __del__(self):
     """ Close the connection to database gracefully """
