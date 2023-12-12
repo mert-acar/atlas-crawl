@@ -20,15 +20,24 @@ def get_config(path: Union[str, os.PathLike]):
   return config
 
 
-def filter_selections():
-  """ IMPLEMENT THIS FUNCTION """
-  pass 
+def filter_selections(key: str):
+  data = uni_data
+  keys = "uni_keys"
+  if "hs_" in key:
+    data = hs_data
+    keys = "hs_keys"
+
+  idx = ss[keys].index(key) + 1
+  for k in ss[keys][idx:]:
+    if len(ss[key]) != 0:
+      ss["options"][f"{k}_options"] = pd.unique(data.loc[data[key].isin(ss[key]), k])
 
 
 def proper_string(text: str) -> str:
   """
-  Correctly capitalizes a Turkish string where only the first character of each word is in uppercase.
-  Turkish-specific characters are handled correctly.
+  Correctly capitalizes a Turkish string where only the first character
+  of each word is in uppercase. Turkish-specific characters are handled
+  correctly.
   """
   # Turkish-specific lowercase conversions
   lowercase_map = {'I': 'ı', 'İ': 'i', 'Ü': 'ü', 'Ö': 'ö', 'Ç': 'ç', 'Ş': 'ş', 'Ğ': 'ğ'}
@@ -36,7 +45,8 @@ def proper_string(text: str) -> str:
   # Split the text into words
   words = text.split()
 
-  # Capitalize the first letter of each word and make the rest lowercase with Turkish rules
+  # Capitalize the first letter of each word and make the rest
+  # lowercase with Turkish rules
   capitalized_words = []
   for word in words:
     first_letter = word[0]
@@ -57,51 +67,156 @@ if __name__ == "__main__":
   config = get_config("configs.yaml")
   db = get_database_session(config["db_path"])
 
-  with st.container(border=True):
-    uni_data = db.get_uni_filter_data()
-    hs_data = db.get_hs_filter_data()
+  uni_data = db.get_uni_filter_data()
+  hs_data = db.get_hs_filter_data()
 
-    r1c1, r1c2 = st.columns(2)
-    with r1c1:
-      key = "City"
+  if "options" not in ss:
+    ss["hs_keys"] = ["hs_city", "hs_district", "hs_name"]
+    ss["uni_keys"] = [
+      "uni_type", "uni_city", "uni_name", "fac_name", "prog_type", "program", "scholarship"
+    ]
+    ss["options"] = {f"{k}_options": sorted(pd.unique(uni_data[k])) for k in ss["uni_keys"]}
+    ss["options"].update({f"{k}_options": sorted(pd.unique(hs_data[k])) for k in ss["hs_keys"]})
+
+  s = 0.3
+  filter_col, data_col = st.columns([s, 1 - s])
+  with filter_col:
+    # with st.form("filters"):
+    with st.container(border=True):
+      st.write("High School Filters")
+      key = "hs_city"
       city = st.multiselect(
-        f"{key}:",
-        options=pd.unique(hs_data[key]),
+        "City:",
+        options=ss["options"][f"{key}_options"],
         key=key,
-        format_func=proper_string
-      )
-    with r1c2:
-      key = "District"
-      district = st.multiselect(
-        f"{key}:",
-        options=pd.unique(hs_data[key]),
-        key=key,
-        format_func=proper_string
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
       )
 
-    r2c1, r2c2, r2c3 = st.columns(3)
-    with r2c1:
-      key = "University"
+      key = "hs_district"
+      district = st.multiselect(
+        "District:",
+        options=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, ),
+        disabled=len(city) == 0
+      )
+
+      key = "hs_name"
+      city = st.multiselect(
+        "High Schools:",
+        options=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
+      )
+
+    with st.container(border=True):
+      st.write("Year")
+      start_year, end_year = st.select_slider(
+        "Year", options=list(range(2019, 2024)), value=(2019, 2023), label_visibility="collapsed"
+      )
+
+    with st.container(border=True):
+      st.write("University Filters")
+
+      key = "uni_type"
+      uni_type = st.multiselect(
+        "Type:",
+        options=ss["options"][f"{key}_options"],
+        default=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
+      )
+      filter_selections(key)
+
+      key = "uni_city"
+      uni_city = st.multiselect(
+        "City:",
+        options=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
+      )
+
+      key = "uni_name"
       uni = st.multiselect(
-        f"{key}:",
-        options=pd.unique(uni_data[f"{key}Name"]),
+        "University:",
+        options=ss["options"][f"{key}_options"],
         key=key,
-        default=config["uni_defaults"],
-        format_func=proper_string
+        default=config["uni_defaults"] if all(t in uni_type for t in ["Private", "State"]) else [],
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
       )
-    with r2c2:
-      key = "Faculty"
+      filter_selections(key)
+
+      key = "fac_name"
       fac = st.multiselect(
-        f"{key}:",
-        options=pd.unique(uni_data[f"{key}Name"]),
+        "Faculty:",
+        options=ss["options"][f"{key}_options"],
         key=key,
-        format_func=proper_string
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
       )
-    with r2c3:
-      key = "Program"
-      dept = st.multiselect(
-        f"{key}:",
-        options=pd.unique(uni_data[f"{key}Name"]),
+
+      key = "prog_type"
+      prog_type = st.multiselect(
+        "Program Type:",
+        options=ss["options"][f"{key}_options"],
         key=key,
-        format_func=proper_string
+        default=config["prog_type_defaults"],
+        on_change=filter_selections,
+        args=(key, )
       )
+      filter_selections(key)
+
+      key = "program"
+      prog = st.multiselect(
+        "Program:",
+        options=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
+      )
+
+      key = "scholarship"
+      scho = st.multiselect(
+        "Scholarship:",
+        options=ss["options"][f"{key}_options"],
+        key=key,
+        format_func=proper_string,
+        on_change=filter_selections,
+        args=(key, )
+      )
+      submitted = st.button("Filter", type="primary", use_container_width=True)
+
+  if submitted:
+    with data_col:
+      with st.spinner("Loading data..."):
+        df = db.get_chart_data()
+        df = df[df["year"].isin(list(range(start_year, end_year + 1)))]
+      st.success("Done.")
+      table, charts = st.tabs(["Table", "Charts"])
+      with table:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Universities", value=f"🏛️ {len(pd.unique(df['uni_name']))}")
+        c2.metric(
+          "Programs", value=f"📓 {len(df.drop_duplicates(subset=['program', 'scholarship']))}"
+        )
+        c3.metric("High Schools", value=f"🎒 {len(pd.unique(df['hs_name']))}")
+        c4.metric("Graduates", value=f"🎓 {(df['old_grad'] + df['new_grad']).sum()}")
+        st.dataframe(
+          df,
+          height=1000,
+          column_config={"year": st.column_config.NumberColumn("Year", format="%d")}
+        )

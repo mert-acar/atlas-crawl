@@ -7,6 +7,8 @@ import streamlit as st
 from typing import Union, Dict, Any
 
 # Set up logging
+if not os.path.exists("../logs"):
+  os.mkdir("../logs")
 db_logger = logging.getLogger("db_logger")
 db_logger.setLevel(logging.INFO)
 db_handler = logging.FileHandler("../logs/db_operations.log")
@@ -14,6 +16,8 @@ db_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(mes
 db_handler.setFormatter(db_formatter)
 db_logger.addHandler(db_handler)
 
+def wrap_quotes(x):
+  return "'" + str(x) + "'"
 
 class CrawlDatabase:
   """
@@ -241,7 +245,15 @@ class CrawlDatabase:
   @st.cache_data
   def get_hs_filter_data(_self) -> pd.DataFrame:
     """ Query the HighSchool table """
-    query = """ SELECT HighSchoolName, City, District, Score FROM HighSchool """
+    query = """
+    SELECT 
+      HighSchoolName as hs_name, 
+      City as hs_city, 
+      District as hs_district, 
+      Score as hs_score 
+    FROM 
+      HighSchool 
+    """
     df = _self.query(query)
     return df
 
@@ -252,13 +264,13 @@ class CrawlDatabase:
     """
     query = """
     SELECT
-      u.UniversityName,
-      u.UniversityType,
-      u.UniversityCity,
-      f.FacultyName,
-      p.ProgramName,
-      p.ScholarshipType,
-      p.ProgramType
+      u.UniversityName as uni_name,
+      u.UniversityType as uni_type,
+      u.UniversityCity as uni_city,
+      f.FacultyName as fac_name,
+      p.ProgramName as program,
+      p.ScholarshipType as scholarship,
+      p.ProgramType as prog_type
     FROM
       University u
       JOIN Faculty f ON f.UniversityID = u.UniversityID
@@ -267,12 +279,56 @@ class CrawlDatabase:
     df = _self.query(query)
     return df
 
+  def get_chart_data(_self) -> pd.DataFrame:
+    query = """
+    SELECT
+      u.UniversityName as uni_name,
+      u.UniversityType as uni_type,
+      u.UniversityCity as uni_city,
+      f.FacultyName as fac_name,
+      p.ProgramName as program,
+      p.ScholarshipType as scholarship,
+      p.ProgramType as prog_type,
+      pd.Year as year,
+      pd.TotalQuota as total_quota,
+      pd.TotalPlaced as total_placed,
+      pd.MinimumRanking as min_ranking,
+      pd.MaximumRanking as max_ranking,
+      hs.HighSchoolName as hs_name,
+      hs.City as hs_city,
+      hs.District as hs_district,
+      hs.Score as score,
+      hsp.NumberOfNewGrads as new_grad,
+      hsp.NumberOfOldGrads as old_grad
+    FROM
+      University u
+      JOIN Faculty f ON f.UniversityID = u.UniversityID
+      JOIN Program p ON p.FacultyID = f.FacultyID
+      JOIN PlacementData pd ON pd.ProgramID = p.ProgramID
+      JOIN HighSchoolPlacement hsp ON hsp.ProgramID = p.ProgramID AND hsp.Year = pd.Year
+      JOIN HighSchool hs ON hs.HighSchoolID = hsp.HighSchoolID
+    WHERE
+    """
+    ss = st.session_state
+    filters = []
+    for k in ss["hs_keys"]:
+      if len(ss[k]) != 0:
+        filters.append(k)
+
+    for k in ss["uni_keys"]:
+      if len(ss[k]) != 0:
+        filters.append(k) 
+    query = query + "AND ".join([f"{key} IN ({', '.join(map(wrap_quotes, ss[key]))}) " for key in filters])
+    return _self.query(query)
+
   def __del__(self):
     """ Close the connection to database gracefully """
     self.conn.close()
 
 
 if __name__ == "__main__":
+  import sys
+
   with open("./schema.sql", "r", encoding="utf-8") as f:
     schema = f.read()
   try:

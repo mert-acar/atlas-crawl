@@ -7,3 +7,6 @@ uni_defaults:
   - KOÇ ÜNİVERSİTESİ
   - İSTANBUL TEKNİK ÜNİVERSİTESİ
   - BOĞAZİÇİ ÜNİVERSİTESİ
+prog_type_defaults:
+  - SAY
+  - EA

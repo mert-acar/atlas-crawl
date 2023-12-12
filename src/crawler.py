@@ -17,13 +17,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
-# Set up logging
-c_logger = logging.getLogger("c_logger")
-c_logger.setLevel(logging.INFO)
-c_handler = logging.FileHandler("../logs/crawl_operations.log")
-c_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-c_handler.setFormatter(c_formatter)
-c_logger.addHandler(c_handler)
 
 URL = "https://yokatlas.yok.gov.tr/{year}/lisans-panel.php?y={program_id}&p={table_id}"
 tables = {"ranking": "1000_1", "highschools": "1060"}
@@ -302,17 +295,26 @@ def crawl_program(
 
 
 if __name__ == "__main__":
+  import os
   from pprint import pprint
 
   # Get the command line arguments
   args = parse_arguments()
 
+  # Set up logging
+  if not os.path.exists("../logs"):
+    os.mkdir("../logs/")
+  c_logger = logging.getLogger("c_logger")
+  c_logger.setLevel(logging.INFO)
+  c_handler = logging.FileHandler("../logs/crawl_operations.log")
+  c_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+  c_handler.setFormatter(c_formatter)
+  c_logger.addHandler(c_handler)
+
   # Create the web driver to crawl
   options = webdriver.chrome.options.Options()
   options.add_argument("--headless")
-  # service = webdriver.chrome.service.Service(executable_path=".\chromedriver")
-  service = webdriver.chrome.service.Service()
-  browser = webdriver.Chrome(options=options, service=service)
+  browser = webdriver.Chrome(options=options)
 
   # Connect to the database
   db = CrawlDatabase(args.database)
