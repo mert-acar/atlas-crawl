@@ -21,7 +21,7 @@ This is a one time installation. Once you have created the virtual environment a
 streamlit run dashboard.py
 ```
 
-Once you are done using the dashboard you can stop it pressing `Ctrl + C` in the terminal session. Use the command `deactivate` to deactivate the Python virtual environment.
+Once you are done using the dashboard you can stop it by pressing `Ctrl + C` in the terminal session. Use the command `deactivate` to deactivate the Python virtual environment.
 
 ## Data Crawling
 Bear in mind that the crawled data and the university index is not shared in this repository! You'll need to create those yourself. The university index is just a set of program IDs designated by the Council of Higher Education. The tables on the site are generated on dynamically, therefore the scraping is done with the help of [selenium](https://www.selenium.dev/documentation/webdriver/). The pages are automatically surfed and the relevant tables are scraped and saved. 
@@ -69,8 +69,8 @@ Crawling is logic is specifically augmented with pauses to reduce risk of IP ban
 
 
 
-## TO DO:
-- [ ] Create a scoring system for ranking programs.
+## TO DO
+- [ ] **Create a scoring system for ranking programs.**
 
 Early drafts use the minimum ranking, the maximum ranking and the quota of the program in the form:
 ```math
@@ -86,11 +86,11 @@ where $\omega$ is the prestige score of the graduates program.
 Ranking of the high schools is curical to the data analysis as it unlocks the information potential of the database. Once can adjusts the pointing system such that it only includes the programs that are in competition to the Bilkent University's program catalog and rank the high schools using these metrics to create a data driven targeting of the key high schools. You can also define various metrics on the marketing campaign success like measuring the top-k high school tour/interaction demand, conversion rate per ₺, etc.
 
 
-- [ ] Create a frontend for the analysis page.
+- [ ] **Create a frontend for the analysis page.**
 
-Various analysis graphs and charts can be integrated to the dashboard. These need to be elicited from the end user - Advisor to the Rector [Currently Dr. Örsan Örge].
+Various analysis graphs and charts can be integrated to the dashboard. These need to be elicited from the end user - Advisor to the Rector (Currently Dr. Örsan Örge).
 
 
-- [ ] Create an ChatBot page to 'chat with the data'.
+- [ ] **Create an ChatBot page to 'chat with the data'.**
       
 Retrieval-Augmented Generation (RAG) is a hot topic for deploying large language models (LLMs) to enable the AI model to use the custom data as context during generation. Tools like [LlamaIndex](https://llamahub.ai/) and [run-llama](https://github.com/run-llama/rags) enable local LLMs to be deployed for custom projects. LLM generation speeds improve everyday with projects like [speculative decoding](https://arxiv.org/abs/2310.07177) and a simple front end to generate charts and can be created easily.
