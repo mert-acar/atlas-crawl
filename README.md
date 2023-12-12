@@ -65,12 +65,12 @@ screen -r dashboard
 Depending on you machine and operating system, selenium may require a chromedriver instance to use during web surfing. You can acquire this driver from [this](https://chromedriver.chromium.org/downloads) site. Simply look up the version of your Google Chrome installation and download the matching chromedriver and place it in `src` directory.
 
 2. **Crawling takes too long for specific programs**:
-Crawling is logic is specifically augmented with pauses to reduce risk of IP banning due to excessive requests. However, crawling a program should not take longer than 2 seconds. If it takes longer there may be a problem with your internet connection or the CoHE servers might be overwhelmed. The database wrapper can handle multiple write requests semi-concurrently, so you can divide your program ids and run multiple crawling runs in parallel to crawl a single year of information for speed up. 
+Crawling logic is specifically augmented with pauses to reduce risk of IP banning due to excessive requests. However, crawling a program should not take longer than 2 seconds. If it takes longer there may be a problem with your internet connection or the CoHE servers might be overwhelmed. The database wrapper can handle multiple write requests semi-concurrently, so you can divide your program ids and run multiple crawling runs in parallel to crawl a single year of information for speed up. 
 
 
 
 ## TO DO
-- [ ] **Create a scoring system for ranking programs.**
+- [ ] **Create a scoring system to rank programs.**
 
 Early drafts use the minimum ranking, the maximum ranking and the quota of the program in the form:
 ```math
