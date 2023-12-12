@@ -60,7 +60,7 @@ screen -r dashboard
 ```
 
 
-### Common Problems and Solutions
+## Common Problems and Solutions
 1. **Selenium ChromeDriver cannot be found**:
 Depending on you machine and operating system, selenium may require a chromedriver instance to use during web surfing. You can acquire this driver from [this](https://chromedriver.chromium.org/downloads) site. Simply look up the version of your Google Chrome installation and download the matching chromedriver and place it in `src` directory.
 
@@ -81,7 +81,7 @@ where PPS is *Program Prestige Score*, $\alpha, \beta, \gamma$ are parameters to
 ```math
     HSS = \frac{1}{\# grads}\sum_{i=1}^{\# grads}\omega_{i}
 ```
-wher $\omega$ is the prestige score of the graduates program.
+where $\omega$ is the prestige score of the graduates program.
 
 Ranking of the high schools is curical to the data analysis as it unlocks the information potential of the database. Once can adjusts the pointing system such that it only includes the programs that are in competition to the Bilkent University's program catalog and rank the high schools using these metrics to create a data driven targeting of the key high schools. You can also define various metrics on the marketing campaign success like measuring the top-k high school tour/interaction demand, conversion rate per ₺, etc.
 
