@@ -71,6 +71,7 @@ Crawling is logic is specifically augmented with pauses to reduce risk of IP ban
 
 ## TO DO:
 - [ ] Create a scoring system for ranking programs.
+
 Early drafts use the minimum ranking, the maximum ranking and the quota of the program in the form:
 ```math
 	PPS(C, R_{\min}, R_{\max}) = \alpha C  \left( \frac{\beta}{R_{\min}} + \frac{\gamma}{R_{\max}} \right)
@@ -86,8 +87,10 @@ Ranking of the high schools is curical to the data analysis as it unlocks the in
 
 
 - [ ] Create a frontend for the analysis page.
+
 Various analysis graphs and charts can be integrated to the dashboard. These need to be elicited from the end user - Advisor to the Rector [Currently Dr. Örsan Örge].
 
 
 - [ ] Create an ChatBot page to 'chat with the data'.
+      
 Retrieval-Augmented Generation (RAG) is a hot topic for deploying large language models (LLMs) to enable the AI model to use the custom data as context during generation. Tools like [LlamaIndex](https://llamahub.ai/) and [run-llama](https://github.com/run-llama/rags) enable local LLMs to be deployed for custom projects. LLM generation speeds improve everyday with projects like [speculative decoding](https://arxiv.org/abs/2310.07177) and a simple front end to generate charts and can be created easily.
