@@ -70,24 +70,24 @@ Crawling is logic is specifically augmented with pauses to reduce risk of IP ban
 
 
 ## TO DO:
-[ ] - Create a scoring system for ranking programs.
+- [ ] Create a scoring system for ranking programs.
 Early drafts use the minimum ranking, the maximum ranking and the quota of the program in the form:
 ```math
 	PPS(C, R_{\min}, R_{\max}) = \alpha C  \left( \frac{\beta}{R_{\min}} + \frac{\gamma}{R_{\max}} \right)
 ```
 
-where PPS is *Program Prestige Score*, \(\alpha, \beta, \gamma\) are parameters to be decided. \(C\) is the program quota, \(R_{\min}\) and \(R_{\max}\) are the minimum and maximum rankings to get admitted respectively. One can hand-tune these parameters based on a heuristic or create an optimization problem like maximizing the overall variance of the score distribution and use numerical solvers to pick the parameters. Once the scoring on programs are done, the high schools can be ranked by the weighted average of the graduates where weights are the program scores:
+where PPS is *Program Prestige Score*, $\alpha, \beta, \gamma$ are parameters to be decided. $C$ is the program quota, $R_{\min}$ and $R_{\max}$ are the minimum and maximum rankings to get admitted respectively. One can hand-tune these parameters based on a heuristic or create an optimization problem like maximizing the overall variance of the score distribution and use numerical solvers to pick the parameters. Once the scoring on programs are done, the high schools can be ranked by the weighted average of the graduates where weights are the program scores:
 ```math
-    HSS = \frac{1}{#grads}\sum_{i=1}^{#grads}\omega_{i}
+    HSS = \frac{1}{\# grads}\sum_{i=1}^{\# grads}\omega_{i}
 ```
 wher $\omega$ is the prestige score of the graduates program.
 
 Ranking of the high schools is curical to the data analysis as it unlocks the information potential of the database. Once can adjusts the pointing system such that it only includes the programs that are in competition to the Bilkent University's program catalog and rank the high schools using these metrics to create a data driven targeting of the key high schools. You can also define various metrics on the marketing campaign success like measuring the top-k high school tour/interaction demand, conversion rate per ₺, etc.
 
 
-[ ] - Create a frontend for the analysis page.
+- [ ] Create a frontend for the analysis page.
 Various analysis graphs and charts can be integrated to the dashboard. These need to be elicited from the end user - Advisor to the Rector [Currently Dr. Örsan Örge].
 
 
-[ ] - Create an ChatBot page to 'chat with the data'.
+- [ ] Create an ChatBot page to 'chat with the data'.
 Retrieval-Augmented Generation (RAG) is a hot topic for deploying large language models (LLMs) to enable the AI model to use the custom data as context during generation. Tools like [LlamaIndex](https://llamahub.ai/) and [run-llama](https://github.com/run-llama/rags) enable local LLMs to be deployed for custom projects. LLM generation speeds improve everyday with projects like [speculative decoding](https://arxiv.org/abs/2310.07177) and a simple front end to generate charts and can be created easily.
