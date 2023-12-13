@@ -81,7 +81,7 @@ where PPS is *Program Prestige Score*, $\alpha, \beta, \gamma$ are parameters to
 ```math
     HSS = \frac{1}{\# grads}\sum_{i=1}^{\# grads}\omega_{i}
 ```
-where $\omega$ is the prestige score of the graduates program.
+where $\omega$ is the prestige score of the graduate's program.
 
 Ranking of the high schools is curical to the data analysis as it unlocks the information potential of the database. Once can adjusts the pointing system such that it only includes the programs that are in competition to the Bilkent University's program catalog and rank the high schools using these metrics to create a data driven targeting of the key high schools. You can also define various metrics on the marketing campaign success like measuring the top-k high school tour/interaction demand, conversion rate per ₺, etc.
 
