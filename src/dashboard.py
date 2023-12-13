@@ -81,7 +81,6 @@ if __name__ == "__main__":
   s = 0.3
   filter_col, data_col = st.columns([s, 1 - s])
   with filter_col:
-    # with st.form("filters"):
     with st.container(border=True):
       st.write("High School Filters")
       key = "hs_city"
