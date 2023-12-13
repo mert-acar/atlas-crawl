@@ -39,7 +39,7 @@ After creating the database you can start crawling. In order to crawl you need t
 python crawler.py 2023 ../data/programs_2023.txt -d ../data/crawl_database.db
 ```
 
-The program IDs can be obtained from the Table4 published by Student Selection and Placement Centre ([ÖSYM](https://www.osym.gov.tr/)). Just download the table from SSPC's site (`Sınavlar > YKS > Kılavuzlar > Yükseköğretim Programları Ek Yerleştirme Kılavuzu ve Tablolar > Tablo-4`) and extract the program ids to a txt file. You can selectively choose which programs to crawl using this file. Currently CoHE website only has information down to 2019.
+The program IDs can be obtained from the Table4 published by Student Selection and Placement Centre ([ÖSYM](https://www.osym.gov.tr/)). Just download the table from SSPC's site (`Sınavlar > YKS > Sayısal Bilgiler > Yerleştirme Sonuçlarına İlişkin Sayısal Bilgiler > Tablo-4`) and extract the program ids to a txt file. You can selectively choose which programs to crawl using this file. Currently CoHE website only has information down to 2019.
 
 Crawled data integrity can be checked using the automated checks in `src/test.py`. Simply run:
 ```bash
