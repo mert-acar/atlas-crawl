@@ -15,16 +15,16 @@ python3 -m virtualenv venv       # Create a virtual environment called 'venv'
 source venv/bin/activate         # Activate the virtual environment
 pip install -r requirements.txt  # Bulk install the required packages
 ```
-This is a one time installation. Once you have created the virtual environment and installed all the packages you can simply run `source venv/bin/activate` to activate the environment and use the software. Once all of the requirements are installed, you can simply run the following command in `src` directory to get the analytics dashboard online.
+This is a one time installation. After you have created the virtual environment and installed all the packages you can simply run `source venv/bin/activate` to activate the environment and use the software. Once all of the requirements are installed, you can simply run the following command in `src` directory to get the analytics dashboard online.
 
 ```bash
 streamlit run dashboard.py
 ```
 
-Once you are done using the dashboard you can stop it by pressing `Ctrl + C` in the terminal session. Use the command `deactivate` to deactivate the Python virtual environment.
+When you are done using the dashboard you can stop it by pressing `Ctrl + C` in the terminal session. Use the command `deactivate` to deactivate the Python virtual environment.
 
 ## Data Crawling
-Bear in mind that the crawled data and the university index is not shared in this repository! You'll need to create those yourself. The university index is just a set of program IDs designated by the Council of Higher Education. The tables on the site are generated on dynamically, therefore the scraping is done with the help of [selenium](https://www.selenium.dev/documentation/webdriver/). The pages are automatically surfed and the relevant tables are scraped and saved. 
+Bear in mind that the crawled data and the university index are not shared in this repository! You'll need to create those yourself. The university index is just a set of program IDs designated by the Council of Higher Education. The tables on the site are generated on dynamically, therefore the scraping is done with the help of [selenium](https://www.selenium.dev/documentation/webdriver/). The pages are automatically surfed and the relevant tables are scraped and saved. 
 
 The scraped data is stored in a [SQLite3](https://www.sqlite.org/docs.html) database. The schema for the database can be found in `src/schema.sql`. Here is a visualization of the database structure:
 ![schema](figures/schema_vis.png)
