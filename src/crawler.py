@@ -1,14 +1,17 @@
 import re
 import time
 import logging
-
-import pandas as pd
-from tqdm import tqdm
 from io import StringIO
 from datetime import datetime
 from typing import Union, Tuple
-from database import CrawlDatabase
 from argparse import ArgumentParser, Namespace
+
+# Library Imports
+import pandas as pd
+from tqdm import tqdm
+
+# Custom Imports
+from database import CrawlDatabase
 
 # Selenium Imports
 from selenium import webdriver
@@ -43,6 +46,11 @@ def parse_arguments() -> Namespace:
     default=5,
     type=int,
     help="Amount of seconds for the webdriver to wait for page to load"
+  )
+  parser.add_argument(
+    "--override",
+    action="store_true",
+    help="If set override the values in the database. Otherwise the value is skipped"
   )
   args = parser.parse_args()
   return args
@@ -228,6 +236,7 @@ def crawl_program(
   """
   url = URL.format(year=year, program_id=idx,
                    table_id=tables["ranking"]).replace(f"{datetime.now().year}/", "")
+  
   attempts = 0
   while attempts < 3:
     try:
@@ -325,7 +334,12 @@ if __name__ == "__main__":
 
   pbar = tqdm(programs)
   for idx in pbar:
-    results = crawl_program(browser, idx, args.year, args.timeout_patience)
+    if not db.check_existence(idx, args.year) or args.override:
+      results = crawl_program(browser, idx, args.year, args.timeout_patience)
+    else:
+      c_logger.error(f"Skipping duplicate: {idx, args.year}")
+      continue
+
     if results == False:
       c_logger.error(f"Could not crawl: {idx, args.year}")
       continue

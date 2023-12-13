@@ -16,8 +16,10 @@ db_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(mes
 db_handler.setFormatter(db_formatter)
 db_logger.addHandler(db_handler)
 
+
 def wrap_quotes(x):
   return "'" + str(x) + "'"
+
 
 class CrawlDatabase:
   """
@@ -242,6 +244,15 @@ class CrawlDatabase:
       results.append(self.thread_safe_write(query, arg))
     return all(results)
 
+  def check_existence(self, idx: str, year: int) -> bool:
+    """ Check if the program data already exists in the database """
+    query = f"SELECT * FROM PlacementData WHERE ProgramID = {idx} AND Year = {year}"
+    res = self.query(query)
+    if len(res):
+      return True
+    else:
+      return False
+
   @st.cache_data
   def get_hs_filter_data(_self) -> pd.DataFrame:
     """ Query the HighSchool table """
@@ -317,8 +328,10 @@ class CrawlDatabase:
 
     for k in ss["uni_keys"]:
       if len(ss[k]) != 0:
-        filters.append(k) 
-    query = query + "AND ".join([f"{key} IN ({', '.join(map(wrap_quotes, ss[key]))}) " for key in filters])
+        filters.append(k)
+    query = query + "AND ".join(
+      [f"{key} IN ({', '.join(map(wrap_quotes, ss[key]))}) " for key in filters]
+    )
     return _self.query(query)
 
   def __del__(self):
