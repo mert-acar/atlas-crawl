@@ -204,18 +204,22 @@ if __name__ == "__main__":
       with st.spinner("Loading data..."):
         df = db.get_chart_data()
         df = df[df["year"].isin(list(range(start_year, end_year + 1)))]
+        ss["df"] = df
       st.success("Done.")
-      table, charts = st.tabs(["Table", "Charts"])
-      with table:
+
+  with data_col:
+    table, charts = st.tabs(["Table", "Charts"])
+    with table:
+      if "df" in ss:
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Universities", value=f"🏛️ {len(pd.unique(df['uni_name']))}")
+        c1.metric("Universities", value=f"🏛️ {len(pd.unique(ss['df']['uni_name']))}")
         c2.metric(
-          "Programs", value=f"📓 {len(df.drop_duplicates(subset=['program', 'scholarship']))}"
+          "Programs", value=f"📓 {len(ss['df'].drop_duplicates(subset=['program', 'scholarship']))}"
         )
-        c3.metric("High Schools", value=f"🎒 {len(pd.unique(df['hs_name']))}")
-        c4.metric("Graduates", value=f"🎓 {(df['old_grad'] + df['new_grad']).sum()}")
+        c3.metric("High Schools", value=f"🎒 {len(pd.unique(ss['df']['hs_name']))}")
+        c4.metric("Graduates", value=f"🎓 {(ss['df']['old_grad'] + ss['df']['new_grad']).sum()}")
         st.dataframe(
-          df,
+          ss["df"],
           height=1000,
           column_config={"year": st.column_config.NumberColumn("Year", format="%d")}
         )
