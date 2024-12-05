@@ -20,7 +20,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
-
 URL = "https://yokatlas.yok.gov.tr/{year}/lisans-panel.php?y={program_id}&p={table_id}"
 tables = {"ranking": "1000_1", "highschools": "1060"}
 
@@ -61,29 +60,6 @@ def find_element(
   element_xpath: str,
   timeout_patience: int = 5,
 ):
-  """
-  Return the element by xpath. Can run function on it if func argument is passed.
-
-  Parameters
-  ----------
-  element_xpath
-    The xpath of the element to be found
-
-  timeout_patience
-    Patient in seconds to get a response from the site
-
-  Returns
-  -------
-  element
-    Desired element handle in selenium 
-
-  Raises
-  ------
-  TimeoutException
-    When the element cannot be found in designated patience, it raises this exception
-  NoSuchElementException
-    If the element you are looking for does not exist, it raises this exception
-  """
   element = WebDriverWait(browser, timeout_patience).until(
     EC.presence_of_element_located((By.XPATH, element_xpath))
   )
@@ -91,23 +67,6 @@ def find_element(
 
 
 def parse_rankings(dfs: list[pd.DataFrame], year: int) -> dict:
-  """
-  Parse general ranking table from HTML
-
-  Parameters
-  ----------
-  dfs
-    Pandas parses the HTML into a standard DF. Pass it here to make it suitable for
-    the database.
-
-  year
-    The for which the data was crawled
-
-  Returns
-  -------
-  out
-    dictionary of the parsed data
-  """
   dept_name = dfs[0].columns[0]
 
   # Some pages have extra promotional tables at the end.
@@ -121,10 +80,11 @@ def parse_rankings(dfs: list[pd.DataFrame], year: int) -> dict:
     }) for df in dfs
   ]
 
-  df = pd.concat(standardized_dfs,
-                 ignore_index=True).replace("---", "").replace("Dolmadı", "").replace(
-                   '\*', '', regex=True
-                 ).map(lambda x: x.strip() if isinstance(x, str) else x)
+  df = pd.concat(
+    standardized_dfs, ignore_index=True
+  ).replace("---", "").replace("Dolmadı", "").replace(
+    '\*', '', regex=True
+  ).map(lambda x: x.strip() if isinstance(x, str) else x)
   data_dict = df.set_index("Column1")["Column2"].to_dict()
   out = {
     "uni_name": data_dict["Üniversite"],
@@ -186,16 +146,14 @@ def parse_highschools(df: pd.DataFrame) -> pd.DataFrame:
     else:
       district = "MERKEZE BAĞLI TAŞRA"
 
-    out = pd.Series(
-      [
-        pure_name,
-        city,
-        district,
-        row["Lise'den Yeni Mezun"],
-        row["Önceki Mezun"],
-      ],
-      index=['hs', 'hs_city', 'hs_district', 'new_grad', 'old_grad']
-    )
+    out = pd.Series([
+      pure_name,
+      city,
+      district,
+      row["Lise'den Yeni Mezun"],
+      row["Önceki Mezun"],
+    ],
+                    index=['hs', 'hs_city', 'hs_district', 'new_grad', 'old_grad'])
     return out
 
   df = df.apply(parser_func, axis=1, result_type="expand")
@@ -208,50 +166,29 @@ def crawl_program(
   year: int,
   timeout_patience: int = 5
 ) -> Union[Tuple[dict, pd.DataFrame], bool]:
-  """
-  Crawl the program page for the rankings and high school placements
 
-  Parameters
-  ----------
-  browser
-    The webdriver instance to simulate the page visits and get the response
+  url = URL.format(
+    year=year, program_id=idx, table_id=tables["ranking"]
+  ).replace(f"{datetime.now().year}/", "")
 
-  idx
-    The program id assigned by the Council of Higher Education
-
-  year
-    The year for which the placement data will be crawled
-
-  timeout_patience
-    Timeout patience for waiting a response from the site
-
-  Returns
-  -------
-  rankings
-    A dictionary describing the ranking data like total quota, total placed,
-    minimum ranking etc.
-
-  highschool
-    A pandas data frame describing the placement table
-  """
-  url = URL.format(year=year, program_id=idx,
-                   table_id=tables["ranking"]).replace(f"{datetime.now().year}/", "")
-  
   attempts = 0
   while attempts < 3:
     try:
       browser.get(url)
+
       # Get the university city
       city = find_element(
         browser, "/html/body/div[1]/div/div/div[2]/div/h3[1]", timeout_patience=timeout_patience
       ).text
+
       # Regular expression magic
-      city = re.findall(r'\(([^)]+)\)', city)[-1]
+      city = re.search(r"(?<=\().*?(?=\))", city).group(0)
 
       # Get the ranking table
       table = find_element(
         browser, f'//*[@id="icerik_{tables["ranking"]}"]', timeout_patience=timeout_patience
       )
+
       # Wait for the table to load
       find_element(
         browser, f'//*[@id="icerik_{tables["ranking"]}"]/table', timeout_patience=timeout_patience
@@ -266,13 +203,16 @@ def crawl_program(
 
   # Parse the table using pandas so that python can read it
   df = pd.read_html(StringIO(table.get_attribute("outerHTML")), thousands='.', decimal=',')
+  print(df)
+  raise SystemExit
   # Parse the tables into useful information
   rankings = parse_rankings(df, year)
   rankings.update({"uni_city": city, "year": year})
 
   # Go to the high schools site
-  url = URL.format(year=year, program_id=idx,
-                   table_id=tables["highschools"]).replace(f"{datetime.now().year}/", "")
+  url = URL.format(
+    year=year, program_id=idx, table_id=tables["highschools"]
+  ).replace(f"{datetime.now().year}/", "")
   attempts = 0
   while attempts < 3:
     try:
@@ -321,9 +261,12 @@ if __name__ == "__main__":
   c_logger.addHandler(c_handler)
 
   # Create the web driver to crawl
-  options = webdriver.chrome.options.Options()
+  # options = webdriver.chrome.options.Options()
+  # options.add_argument("--headless")
+  # browser = webdriver.Chrome(options=options)
+  options = webdriver.firefox.options.Options()
   options.add_argument("--headless")
-  browser = webdriver.Chrome(options=options)
+  browser = webdriver.Firefox(options=options)
 
   # Connect to the database
   db = CrawlDatabase(args.database)

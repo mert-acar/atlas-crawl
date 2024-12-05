@@ -1,3 +1,5 @@
+PRAGMA foreign_keys = ON;
+
 -- University Table
 CREATE TABLE University (
     UniversityID INTEGER PRIMARY KEY,
@@ -64,3 +66,4 @@ CREATE TABLE HighSchoolPlacement (
     FOREIGN KEY (ProgramID) REFERENCES Program(ProgramID),
     PRIMARY KEY (HighSchoolID, ProgramID, Year)
 );
+

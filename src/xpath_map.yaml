@@ -1,0 +1,25 @@
+city_string: "/html/body/div[1]/div/div/div[2]/div/h3[1]"
+
+ranking:
+  table_id: "1000_1"
+  table_xpath: //*[@id="icerik_1000_1"]
+  element_xpaths:
+    uni_name: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/tbody/tr[3]/td[2]"
+    uni_type: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/tbody/tr[2]/td[2]"
+    fac_name: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/tbody/tr[4]/td[2]"
+    dept_name: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/thead/tr/th/big"
+    dept_type: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/tbody/tr[5]/td[2]"
+    scholarship: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[1]/tbody/tr[6]/td[2]"
+    total_quota: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[2]/tbody/tr[3]/td[2]"
+    total_placed: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[2]/tbody/tr[6]/td[2]"
+    min_points: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[3]/tbody/tr[1]/td[2]"
+    max_points: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[3]/tbody/tr[5]/td[2]"
+    min_ranking: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[3]/tbody/tr[3]/td[2]"
+    max_ranking: "/html/body/div[1]/div/div/div[6]/div/div[1]/div[2]/div/div/table[3]/tbody/tr[6]/td[2]"
+    
+    
+
+highschools:
+  table_id: "1060"
+  table_xpath: //*[@id="icerik_1060"]
+  element_xpaths: null
